@@ -55,10 +55,10 @@ impl fmt::Display for Note {
 
 fn parse_notes(fname: &str) -> Result<Vec<Note>, Box<error::Error>> {
     let mut result: Vec<Note> = vec![];
-    let notes = read_to_string(fname)?;
-    "\n *".to_string().push_str(notes.trim());
+    let mut notes = "\n".to_owned();
+    notes.push_str(&read_to_string(fname)?.trim());
     let raw_notes: Vec<&str> = notes.split("\n* ").collect();
-    for rnote in raw_notes.iter() {
+    for rnote in raw_notes.iter().skip(1) {
         result.push(rnote.parse::<Note>()?);
     }
     Ok(result)
