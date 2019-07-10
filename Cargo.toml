@@ -1,0 +1,9 @@
+[package]
+name = "org2mds"
+version = "0.1.0"
+authors = ["jasilven <jasilven@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+regex = "1"
+chrono = "0.4.7"
