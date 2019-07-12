@@ -1,7 +1,17 @@
+/*! Converts org file
+org2mds is a command line tool which parses org-file's top level headings and
+their content to separate notes and writes them to separate files in current directory.
+org-file's top level headings should be formatted like this:
+'* some heading title <yyyy-MM-dd EEE kk:mm>'
+
+Usage:
+% org2mds <org-file>
+*/
 use chrono::prelude::*;
 use std::env;
 use std::error;
 use std::fmt;
+use std::fs;
 use std::fs::read_to_string;
 use std::str::FromStr;
 
@@ -26,7 +36,7 @@ impl FromStr for Note {
             return Err(format!("Unable to parse header line: {}", all_lines[0]));
         }
         let result = Note {
-            title: title_date[0].to_string(),
+            title: title_date[0].trim().to_string(),
             date: Utc
                 .datetime_from_str(title_date[1], DATE_FMT)
                 .map_err(|_| {
@@ -35,7 +45,7 @@ impl FromStr for Note {
                         all_lines[0], title_date[1], DATE_FMT
                     )
                 })?,
-            content: all_lines[1..].iter().map(|s| s.to_owned()).collect(),
+            content: all_lines[1..].iter().map(|s| {let mut ss = s.to_string();ss.push_str("\n"); ss}).collect(),
         };
         Ok(result)
     }
@@ -45,7 +55,7 @@ impl fmt::Display for Note {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "* {} {}\n {})",
+            "# {}\n{}\n\n{}",
             self.title,
             self.date.format(DATE_FMT).to_string(),
             self.content
@@ -64,6 +74,17 @@ fn parse_notes(fname: &str) -> Result<Vec<Note>, Box<error::Error>> {
     Ok(result)
 }
 
+fn create_file(note: &Note) -> Result<(), Box<error::Error>> {
+    let mut fname = note.title.replace("/", " ");
+    fname.push_str(".md");
+    if fs::File::open(&fname).is_err() {
+        fs::write(&fname, note.to_string())?;
+        Ok(())
+    } else {
+        Err(format!("cannot save note {}, maybe file already exists", note.title).into())
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
@@ -73,7 +94,13 @@ fn main() {
             Ok(notes) => {
                 println!("Parsed {:?} notes:", notes.len());
                 for note in notes {
-                    println!("{} {}", note.title, note.date);
+                    println!("'{}' {}", note.title, note.date);
+                    match create_file(&note) {
+                        Err(e) => {
+                            eprintln!("could not create file for note {}: {}", &note.title, &e)
+                        }
+                        _ => (),
+                    }
                 }
             }
             Err(e) => println!("Error: {}", e),
