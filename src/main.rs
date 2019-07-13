@@ -26,26 +26,23 @@ struct Note {
 impl FromStr for Note {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let all_lines: Vec<&str> = s.split('\n').collect();
-        let title_date: Vec<&str> = all_lines[0]
+        let splits: Vec<&str> = s.splitn(2, '\n').collect();
+        let title_date: Vec<&str> = splits[0]
             .trim_end()
             .trim_end_matches('>')
             .split('<')
             .collect();
         if title_date.len() != 2 {
-            return Err(format!("Unable to parse header line: {}", all_lines[0]));
+            return Err(format!("Unable to parse header line: {}", s));
         }
         let result = Note {
             title: title_date[0].trim().to_string(),
             date: Utc
                 .datetime_from_str(title_date[1], DATE_FMT)
                 .map_err(|_| {
-                    format!(
-                        "unable to parse date from '{}'. Date '{}' not in require format '{}' or date is wrong",
-                        all_lines[0], title_date[1], DATE_FMT
-                    )
+                    format!( "unable to parse date from '{}'. Date '{}' not in require format '{}' or date is wrong", s, title_date[1], DATE_FMT )
                 })?,
-            content: all_lines[1..].iter().map(|s| {let mut ss = s.to_string();ss.push_str("\n"); ss}).collect(),
+            content: if splits.len() == 1 { "".into() } else { splits[1].to_owned()},
         };
         Ok(result)
     }
